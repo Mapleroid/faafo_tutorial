@@ -2,6 +2,14 @@
 
 from PIL import Image
 import random
+import tempfile
+import time
+import os
+import base64
+import hashlib
+import json
+import socket
+import requests
 
 from kombu import Queue, Exchange, Connection
 from kombu.mixins import ConsumerMixin
@@ -34,9 +42,13 @@ class JuliaSet(object):
                 self.image.putpixel((x, y),
                                     (i % 8 * 32, i % 16 * 16, i % 32 * 8))
 
-    def save_to_file(self, uuid):
-        with open(uuid+".png",'w') as fp:
+    #def save_to_file(self, uuid):
+    #    with open(uuid+".png",'w') as fp:
+    #        self.image.save(fp, "PNG")
+    def get_file(self):
+        with tempfile.NamedTemporaryFile(delete=False) as fp:
             self.image.save(fp, "PNG")
+            return fp.name
 
     def _set_point(self):
         random.seed()
@@ -66,7 +78,8 @@ class Worker(ConsumerMixin):
                          callbacks=[self.on_task])]
 
     def on_task(self, task, message):
-        print('Got task: {0!r}'.format(task))
+        #print('Got task: {0!r}'.format(task))
+        start_time = time.time()
 
         juliaset = JuliaSet(task['width'],
                             task['height'],
@@ -75,8 +88,36 @@ class Worker(ConsumerMixin):
                             task['ya'],
                             task['yb'],
                             task['iterations'])
-        juliaset.save_to_file(task['uuid'])
+        elapsed_time = time.time() - start_time
+
+        #juliaset.save_to_file(task['uuid'])
+        filename = juliaset.get_file()
+        with open(filename, "rb") as fp:
+            size = os.fstat(fp.fileno()).st_size
+            image = base64.b64encode(fp.read())
+        checksum = hashlib.sha256(open(filename, 'rb').read()).hexdigest()
+        os.remove(filename)
+        
+        result = {
+            'uuid': task['uuid'],
+            'duration': elapsed_time,
+            'image': image,
+            'checksum': checksum,
+            'size': size,
+            'generated_by': socket.gethostname()
+        }
+
+        # NOTE(berendt): only necessary when using requests < 2.4.2
+        headers = {'Content-type': 'application/json',
+                   'Accept': 'text/plain'}
+
+        requests.put("%s/v1/fractal/%s" %
+                     ('http://localhost:5000', str(task['uuid'])),
+                     json.dumps(result), headers=headers)
+
         message.ack()
+        return result
+
 
 connection = Connection('amqp://guest:guest@localhost:5672//')
 server = Worker(connection)
