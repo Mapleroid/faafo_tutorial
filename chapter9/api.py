@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+from kombu import Connection, Producer, Exchange
+
 import flask
 import flask_restless
 import flask_sqlalchemy
@@ -33,6 +35,17 @@ class Fractal(db.Model):
 db.create_all()
 manager = flask_restless.APIManager(app, flask_sqlalchemy_db=db)
 
+
+def generate_fractal(**kwargs):
+    with Connection('amqp://guest:guest@localhost:5672//') as connection:
+        producer = Producer(connection)
+        producer.publish(kwargs['result'],
+                     exchange=Exchange('julia_exchange', type='direct'),
+                     routing_key='julia_generate',
+                     serializer='json',
+                     compression='zlib')
+
 manager.create_api(Fractal, methods=['GET', 'POST', 'DELETE', 'PUT'],
+                    postprocessors={'POST': [generate_fractal]},
                     url_prefix='/v1')
 app.run(host="0.0.0.0", port=5000)
