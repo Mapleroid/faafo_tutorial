@@ -40,10 +40,7 @@ def get_random_task():
 #for i in range(0,100):
 #    requests.post("%s/v1/fractal" % "http://localhost:5000",
 #              json.dumps(get_random_task()),headers=headers)
-def add_items():
-    for i in range(0,100):
-        requests.post("%s/v1/fractal" % "http://localhost:5000",
-              json.dumps(get_random_task()),headers=headers) 
+ 
 
 # update a item
 #requests.put("%s/v1/fractal/%s" % ("http://localhost:5000",'f0e3480e-60f9-42e9-9769-cd7dd62dd138'),
@@ -68,34 +65,12 @@ def add_items():
 # query
 #filters = [dict(name='size', op='gt',val=0)]
 #filters = [dict(name='checksum', op='is_not_null')]
-#filters = [dict({"and": [dict(name='size', op='gt',val=0),dict(name='checksum', op='is_not_null')]})]
-#params = dict(q=json.dumps(dict(filters=filters)))
+filters = [dict({"and": [dict(name='size', op='gt',val=0),dict(name='checksum', op='is_not_null')]})]
+params = dict(q=json.dumps(dict(filters=filters)))
 
-#response = requests.get("%s/v1/fractal%s" % ("http://localhost:5000","?page=2&results_per_page=5"), params=params, headers=headers)
+response = requests.get("%s/v1/fractal%s" % ("http://localhost:5000","?page=2&results_per_page=5"), params=params, headers=headers)
 
 #response = requests.get("%s/v1/fractal/%s" % ("http://localhost:5000",'99c06c4c-6253-4a91-bdbe-f48037997169'),
 #                 headers=headers)
-#print response.status_code
-#print(response.json())
-
-def query(page):
-    filters = [dict({"and": [dict(name='size', op='gt',val=0),dict(name='checksum', op='is_not_null')]})]
-    params = dict(q=json.dumps(dict(filters=filters)))
-    response = requests.get("%s/v1/fractal?page=%d&results_per_pages=%d" % ("http://localhost:5000",page,5), params=params, headers=headers)
-
-    print response.status_code
-    print(response.json())
-
-#add_items()
-query(2)
-
-def get_image(fractalid):
-    headers = {'Content-type': 'application/json',
-                   'Accept': 'text/plain'}
-    filters = [dict(name='image_uuid', op='eq',val=fractalid)]
-    params = dict(q=json.dumps(dict(filters=filters)))
-    response = requests.get("%s/v1/image" % "http://localhost:5000", params=params, headers=headers)
-    print response.status_code
-    print response.json()['objects'][0]['image']
-
-#get_image('ee2ebece-7208-4029-b6cb-1efad5b3c7e8')
+print response.status_code
+print(response.json())

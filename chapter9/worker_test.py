@@ -98,33 +98,25 @@ class Worker(ConsumerMixin):
         checksum = hashlib.sha256(open(filename, 'rb').read()).hexdigest()
         os.remove(filename)
         
-        result_fractal = {
+        result = {
             'uuid': task['uuid'],
             'duration': elapsed_time,
+            'image': image,
             'checksum': checksum,
             'size': size,
             'generated_by': socket.gethostname()
-        }
-
-        result_image = {
-            'image_uuid': task['uuid'],
-            'image': image
         }
 
         # NOTE(berendt): only necessary when using requests < 2.4.2
         headers = {'Content-type': 'application/json',
                    'Accept': 'text/plain'}
 
-        requests.post("%s/v1/image" %
-                     'http://localhost:5000',
-                     json.dumps(result_image), headers=headers)
-
         requests.put("%s/v1/fractal/%s" %
                      ('http://localhost:5000', str(task['uuid'])),
-                     json.dumps(result_fractal), headers=headers)
+                     json.dumps(result), headers=headers)
 
         message.ack()
-        return result_fractal
+        return result
 
 
 connection = Connection('amqp://guest:guest@localhost:5672//')
